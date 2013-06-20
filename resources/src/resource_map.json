@@ -1,0 +1,31 @@
+{
+    "media": [
+        {
+            "defName": "IMAGE_LIP",
+            "type": "png",
+            "file": "images/lip.png"
+        },
+        {
+            "defName": "IMAGE_HAND",
+            "type": "png-trans",
+            "file": "images/hand.png"
+        },
+        {
+            "defName": "IMAGE_MENU_ICON",
+            "type": "png",
+            "file": "images/menu_icon.png"
+        },
+        {
+            "defName": "IMAGE_MOUTH",
+            "type": "png",
+            "file": "images/mouth.png"
+        },
+        {
+            "defName": "IMAGE_NEKO",
+            "type": "png",
+            "file": "images/background.png"
+        }
+    ],
+    "friendlyVersion": "VERSION",
+    "versionDefName": "APP_RESOURCES"
+}

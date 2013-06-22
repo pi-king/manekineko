@@ -5,7 +5,7 @@
 #define MY_UUID { 0x1B, 0xCF, 0x9B, 0x64, 0x60, 0x1E, 0x47, 0xC3, 0x96, 0x87, 0xB4, 0x30, 0xE0, 0xB5, 0x4A, 0xC7 }
 PBL_APP_INFO(MY_UUID,
 			 "manekineko", "piking",
-			 1, 1, /* App version */
+			 1, 2, /* App version */
 			 RESOURCE_ID_IMAGE_MENU_ICON,
 			 APP_INFO_WATCH_FACE);
 
@@ -118,10 +118,10 @@ void handle_init(AppContextRef ctx) {
 	
 	layer_add_child(&window.layer, &neko.layer.layer);
 	
-	mouth_from_rect = GRect(62, 57, 12, 8);
-	mouth_to_rect = GRect(62, 65, 12, 8);
-	hand_from_rect = GRect(93, 35, 37, 27);
-	hand_to_rect = GRect(93, 50, 37, 27);
+	mouth_from_rect = GRect(66, 57, 12, 8);
+	mouth_to_rect = GRect(66, 65, 12, 8);
+	hand_from_rect = GRect(97, 35, 37, 27);
+	hand_to_rect = GRect(97, 50, 37, 27);
 	
 	GRect frame;  //holding frame
 	

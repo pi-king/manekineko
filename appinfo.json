@@ -4,6 +4,9 @@
     "appKeys": {},
     "longName": "Manekineko2",
     "versionCode": 1,
+    "capabilities": [
+        ""
+    ],
     "shortName": "Manekineko2",
     "companyName": "piking",
     "watchapp": {
@@ -11,6 +14,21 @@
     },
     "resources": {
         "media": [
+            {
+                "type": "png",
+                "name": "IMAGE_DISCONNECT",
+                "file": "images/disconnect.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_BLUETOOTH",
+                "file": "images/bluetooth.png"
+            },
+            {
+                "type": "png",
+                "name": "IMAGE_BATTERY",
+                "file": "images/battery.png"
+            },
             {
                 "type": "png",
                 "name": "IMAGE_MOUTH",

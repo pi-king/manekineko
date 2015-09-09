@@ -1,54 +1,76 @@
 {
-    "versionLabel": "1.0",
-    "uuid": "7c27100a-aefd-4813-8e02-b0fc1596369b",
-    "appKeys": {},
-    "longName": "Manekineko2",
-    "versionCode": 1,
-    "capabilities": [
-        ""
-    ],
-    "shortName": "Manekineko2",
-    "companyName": "piking",
-    "watchapp": {
-        "watchface": true
+    "appKeys": {
+        "KEY_BKGND_COLOR": 5,
+        "KEY_SHOW_BATTERY": 2,
+        "KEY_SHOW_BT": 3,
+        "KEY_SHOW_DATE": 1,
+        "KEY_TEXT_COLOR": 6,
+        "KEY_VIBE_BT": 4
     },
+    "capabilities": [
+        "configurable"
+    ],
+    "companyName": "piking",
+    "longName": "Manekineko",
+    "projectType": "native",
     "resources": {
         "media": [
             {
-                "type": "png",
-                "name": "IMAGE_DISCONNECT",
-                "file": "images/disconnect.png"
+                "file": "images/menu_icon.png",
+                "name": "IMAGE_MENU_ICON",
+                "type": "png"
             },
             {
-                "type": "png",
-                "name": "IMAGE_BLUETOOTH",
-                "file": "images/bluetooth.png"
+                "file": "images/disconnectt.png",
+                "name": "IMAGE_DISCONNECT_2",
+                "type": "png"
             },
             {
-                "type": "png",
-                "name": "IMAGE_BATTERY",
-                "file": "images/battery.png"
+                "file": "images/bluetootht.png",
+                "name": "IMAGE_BLUETOOTH_2",
+                "type": "png"
             },
             {
-                "type": "png",
+                "file": "images/batteryt.png",
+                "name": "IMAGE_BATTERY_2",
+                "type": "png"
+            },
+            {
+                "file": "images/background_s.png",
+                "name": "IMAGE_NEKO_SMALL",
+                "type": "png"
+            },
+            {
+                "file": "images/nothingt.png",
+                "name": "IMAGE_NOTHING_2",
+                "type": "png"
+            },
+            {
+                "file": "images/mouth.png",
                 "name": "IMAGE_MOUTH",
-                "file": "images/mouth.png"
+                "type": "png"
             },
             {
-                "type": "png",
+                "file": "images/lip.png",
                 "name": "IMAGE_LIP",
-                "file": "images/lip.png"
+                "type": "png"
             },
             {
-                "type": "png-trans",
+                "file": "images/hand.png",
                 "name": "IMAGE_HAND",
-                "file": "images/hand.png"
-            },
-            {
-                "type": "png",
-                "name": "IMAGE_NEKO",
-                "file": "images/background.png"
+                "type": "png-trans"
             }
         ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Manekineko",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
+    "uuid": "7c27100a-aefd-4813-8e02-b0fc1596369b",
+    "versionLabel": "2.0",
+    "watchapp": {
+        "watchface": true
     }
 }

@@ -52,6 +52,7 @@ static char time_text[] = "00:00";
 static char time_text_buffer[] = "00:00";
 static char date_text_string[12];
 static int current_battery_level=-1;
+static char current_bluetooth_status[] = "";
 
 static GColor text_color;
 static GColor background_color;
@@ -63,7 +64,11 @@ void destroy_property_animation(PropertyAnimation **prop_animation) {
     if (animation_is_scheduled((Animation*) *prop_animation)) {
         animation_unschedule((Animation*) *prop_animation);
     }
+	
+	#ifdef PBL_BW
     property_animation_destroy(*prop_animation);
+	#endif
+	
     *prop_animation = NULL;
 }
 
@@ -76,6 +81,7 @@ void animation_stopped(Animation *animation, void *data) {
 	(void)animation;
 	(void)data;
 	
+	
 	memcpy(time_text, time_text_buffer, strlen(time_text)+1);
     text_layer_set_text(text_time_layer, time_text);
 	
@@ -87,16 +93,22 @@ void animation_stopped(Animation *animation, void *data) {
 	mouth_animation_end = property_animation_create_layer_frame(bitmap_layer_get_layer(mouthLayer), &mouth_to_rect, &mouth_from_rect);
 	hand_animation_end = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer1), &hand_to_rect, &hand_from_rect);
 	hand_animation_end2 = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer2), &hand_to_rect, &hand_from_rect);
+	
 	animation_set_duration((Animation*)mouth_animation_end, 500);
 	animation_set_duration((Animation*)hand_animation_end, 1000);
 	animation_set_duration((Animation*)hand_animation_end2, 1000);
-	
-	animation_set_curve((Animation*)mouth_animation_end,AnimationCurveEaseOut);
+
+	animation_set_curve((Animation*)mouth_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_end,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_end2,AnimationCurveEaseOut);
+	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",109,"schedule stop animation");
+	
 	animation_schedule((Animation*)mouth_animation_end);
 	animation_schedule((Animation*)hand_animation_end);
 	animation_schedule((Animation*)hand_animation_end2);
+	
+
 }
 
 static void handle_battery(BatteryChargeState charge_state) {
@@ -119,30 +131,51 @@ static void handle_battery(BatteryChargeState charge_state) {
 }
 
 static void handle_bluetooth(bool connected) {
-	Layer *rootLayer = window_get_root_layer(window);
+	int change_to = 0;
 	
-	layer_remove_from_parent(bitmap_layer_get_layer(bluetoothLayer));
-    bitmap_layer_destroy(bluetoothLayer);
-	
-	bluetoothLayer = bitmap_layer_create(bluetooth_rect);
-	#ifdef PBL_PLATFORM_BASALT
-	bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
-	#endif
 	if (persist_read_bool(KEY_SHOW_BT)) {
 		if (connected) {
-			bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
-		} else {
-			bitmap_layer_set_bitmap(bluetoothLayer, disconnect);
-			if (persist_read_bool(KEY_VIBE_BT)) {
-			vibes_long_pulse();
-			APP_LOG(APP_LOG_LEVEL_DEBUG, "vibrate");
+			if (strcmp(current_bluetooth_status,"connected") != 0 ){
+			 change_to = 1;
+			 strcpy(current_bluetooth_status, "connected");
 			}
+		} else if (strcmp(current_bluetooth_status,"disconnected") != 0 ){
+			 change_to = 2;
+			 strcpy(current_bluetooth_status, "disconnected");
 		}
-	}else{
-		bitmap_layer_set_bitmap(bluetoothLayer, nothing);
+	}else if (strcmp(current_bluetooth_status,"invisible") != 0 ){
+		 change_to = 3;
+		 strcpy(current_bluetooth_status, "invisible");
 	}
-	layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
-	layer_mark_dirty(bitmap_layer_get_layer(bluetoothLayer));
+	
+	if (change_to != 0) {
+		Layer *rootLayer = window_get_root_layer(window);
+		layer_remove_from_parent(bitmap_layer_get_layer(bluetoothLayer));
+		bitmap_layer_destroy(bluetoothLayer);
+			
+		bluetoothLayer = bitmap_layer_create(bluetooth_rect);
+		#if defined(PBL_COLOR)
+		bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
+		#endif
+		
+		switch (change_to){
+			case 1:
+				bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
+				break;
+			case 2:
+				bitmap_layer_set_bitmap(bluetoothLayer, disconnect);
+				if (persist_read_bool(KEY_VIBE_BT)) {
+				vibes_long_pulse();
+				}
+				break;
+			case 3:
+				bitmap_layer_set_bitmap(bluetoothLayer, nothing);
+				break;
+		}
+		
+		layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
+		layer_mark_dirty(bitmap_layer_get_layer(bluetoothLayer));
+	}
 }
 
 static void handle_appfocus(bool in_focus){
@@ -152,10 +185,11 @@ static void handle_appfocus(bool in_focus){
 }
 
 void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
-	
+		
 	destroy_property_animation(&mouth_animation_beg);
 	destroy_property_animation(&hand_animation_beg);
 	destroy_property_animation(&hand_animation_beg2);
+	
 	mouth_animation_beg = property_animation_create_layer_frame(bitmap_layer_get_layer(mouthLayer), &mouth_from_rect, &mouth_to_rect);
 	hand_animation_beg = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer1), &hand_from_rect, &hand_to_rect);
 	hand_animation_beg2 = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer2), &hand_from_rect, &hand_to_rect);
@@ -164,13 +198,16 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	animation_set_duration((Animation*)hand_animation_beg, 1000);
 	animation_set_duration((Animation*)hand_animation_beg2, 1000);
 	
+	
 	animation_set_curve((Animation*)mouth_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_beg2,AnimationCurveEaseOut);
-	animation_set_handlers((Animation*)mouth_animation_beg, (AnimationHandlers) {
+	
+	animation_set_handlers((Animation*)hand_animation_beg, (AnimationHandlers) {
 		.started = (AnimationStartedHandler) animation_started,
 		.stopped = (AnimationStoppedHandler) animation_stopped
 	}, 0);
+
 	// section based on Simplicity by Pebble Team begins
 	char *time_format;
 	if (clock_is_24h_style()) {
@@ -186,11 +223,11 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 	strftime(date_text_string, sizeof(date_text_string), "%d-%b-%Y", tick_time);
 	text_layer_set_text(text_date_layer, date_text_string);
-
 	
-	animation_schedule((Animation*)mouth_animation_beg);
+	
 	animation_schedule((Animation*)hand_animation_beg);
 	animation_schedule((Animation*)hand_animation_beg2);
+	animation_schedule((Animation*)mouth_animation_beg);
 	
 }
 
@@ -208,36 +245,36 @@ static void window_load(Window *window) {
 	nothing = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_NOTHING_2);
 	
 	//don't know why but position is different in APLITE&BASALT
-	#ifdef PBL_PLATFORM_APLITE
+	#if defined(PBL_BW)
 		neko_rect = GRect(23, 0, 105, 130); 
-	#elif PBL_PLATFORM_BASALT
-		neko_rect = GRect(19, 0, 105, 130);
+	#elif defined(PBL_COLOR)
+		neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0, 105, 130);
 	#endif
 	
-	mouth_from_rect = GRect(66, 52, 12, 8);
-	mouth_to_rect = GRect(66, 60, 12, 8);
-	hand_from_rect = GRect(97, 30, 37, 27);
-	hand_to_rect = GRect(97, 45, 37, 27);
-	lip_rect = GRect(64, 47, 16, 13);  //mouth x-2 y-5
-	battery_rect = GRect(8,5,20,20);
-	bluetooth_rect = GRect(124,5,20,20);
+	mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52, 12, 8);
+	mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59, 12, 8);
+	hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30, 37, 27);
+	hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45, 37, 27);
+	lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47, 16, 13);  //mouth x-2 y-5
+	battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,5),20,20);
+	bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,124),PBL_IF_ROUND_ELSE(82,5),20,20);
 	
 	batteryLayer = bitmap_layer_create(battery_rect);
-	#ifdef PBL_PLATFORM_BASALT
+	#if defined(PBL_COLOR)
 	bitmap_layer_set_compositing_mode(batteryLayer, GCompOpSet);
 	#endif
     bitmap_layer_set_bitmap(batteryLayer, battery);
 	layer_add_child(rootLayer, bitmap_layer_get_layer(batteryLayer));
 	
 	bluetoothLayer = bitmap_layer_create(bluetooth_rect);
-	#ifdef PBL_PLATFORM_BASALT
+	#if defined(PBL_COLOR)
 	bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
 	#endif
     bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
 	layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
 	
 	nekoLayer = bitmap_layer_create(neko_rect);
-	#ifdef PBL_PLATFORM_BASALT
+	#if defined(PBL_COLOR)
 	bitmap_layer_set_compositing_mode(nekoLayer, GCompOpSet);
 	#endif
     bitmap_layer_set_bitmap(nekoLayer, neko);
@@ -246,6 +283,7 @@ static void window_load(Window *window) {
 	mouthLayer = bitmap_layer_create(mouth_from_rect);
     bitmap_layer_set_bitmap(mouthLayer, mouth);
     layer_add_child(rootLayer, bitmap_layer_get_layer(mouthLayer));
+	
 	lipLayer = bitmap_layer_create(lip_rect);
     bitmap_layer_set_bitmap(lipLayer, lip);
 	layer_add_child(rootLayer, bitmap_layer_get_layer(lipLayer));
@@ -265,7 +303,7 @@ static void window_load(Window *window) {
 	layer_add_child(rootLayer, bitmap_layer_get_layer(handLayer1));
 	layer_add_child(rootLayer, bitmap_layer_get_layer(handLayer2));
 		
-	text_date_layer = text_layer_create(GRect(0, 145, 144, 35));
+	text_date_layer = text_layer_create(GRect(0, 145, PBL_IF_ROUND_ELSE(180,144), 35));
     text_layer_set_text_color(text_date_layer, text_color);
     text_layer_set_background_color(text_date_layer, GColorClear);
     text_layer_set_text_alignment(text_date_layer, GTextAlignmentCenter);
@@ -273,15 +311,14 @@ static void window_load(Window *window) {
     layer_add_child(rootLayer, text_layer_get_layer(text_date_layer));
 	
 	
-	text_time_layer = text_layer_create(GRect(0, 115, 144, 53));
+	text_time_layer = text_layer_create(GRect(0, 115, PBL_IF_ROUND_ELSE(180,144), 53));
     text_layer_set_text_color(text_time_layer, text_color);
     text_layer_set_background_color(text_time_layer, GColorClear);
     text_layer_set_text_alignment(text_time_layer, GTextAlignmentCenter);
     text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS));
     layer_add_child(rootLayer, text_layer_get_layer(text_time_layer));
 
-	
-	batterytext_layer = text_layer_create(GRect(3,18,30,20));
+	batterytext_layer = text_layer_create(GRect(PBL_IF_ROUND_ELSE(10,3),PBL_IF_ROUND_ELSE(90,18),30,20));
     text_layer_set_text_color(batterytext_layer, text_color);
     text_layer_set_background_color(batterytext_layer, GColorClear);
     text_layer_set_font(batterytext_layer, fonts_get_system_font(FONT_KEY_FONT_FALLBACK));
@@ -322,10 +359,10 @@ static void window_unload(Window *window) {
 }
 
 void update_settings() {
-	#ifdef PBL_PLATFORM_APLITE
+	#if defined(PBL_BW)
 		text_color = GColorWhite;
 		background_color = GColorBlack;
-	#elif PBL_PLATFORM_BASALT
+	#elif defined(PBL_COLOR)
 		GColor8 color;
 		color.argb = persist_read_int(KEY_TEXT_COLOR);
 		text_color = color;
@@ -350,7 +387,7 @@ void update_settings() {
 	bitmap_layer_destroy(batteryLayer);
 	
 	batteryLayer = bitmap_layer_create(battery_rect);
-	#ifdef PBL_PLATFORM_BASALT
+	#if defined(PBL_COLOR)
 	bitmap_layer_set_compositing_mode(batteryLayer, GCompOpSet);
 	#endif
 	if (persist_read_bool(KEY_SHOW_BATTERY)) {
@@ -435,7 +472,7 @@ static void init(void) {
 		persist_write_bool(KEY_VIBE_BT, true);
 	}
 	
-	#ifdef PBL_PLATFORM_BASALT
+	#if defined(PBL_COLOR)
 	if (persist_exists(KEY_TEXT_COLOR) == false) {
 		persist_write_int(KEY_TEXT_COLOR, GColorWhiteARGB8);
 	}

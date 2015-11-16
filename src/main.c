@@ -52,7 +52,6 @@ static char time_text[] = "00:00";
 static char time_text_buffer[] = "00:00";
 static char date_text_string[12];
 static int current_battery_level=-1;
-static char current_bluetooth_status[] = "";
 
 static GColor text_color;
 static GColor background_color;
@@ -64,8 +63,6 @@ void destroy_property_animation(PropertyAnimation **prop_animation) {
     if (animation_is_scheduled((Animation*) *prop_animation)) {
         animation_unschedule((Animation*) *prop_animation);
     }
-	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",68,"destroy_animation");
 	
 	#ifdef PBL_BW
     property_animation_destroy(*prop_animation);
@@ -83,7 +80,6 @@ void animation_stopped(Animation *animation, void *data) {
 	(void)animation;
 	(void)data;
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",86,"schedule stop animation");
 	
 	memcpy(time_text, time_text_buffer, strlen(time_text)+1);
     text_layer_set_text(text_time_layer, time_text);
@@ -93,31 +89,22 @@ void animation_stopped(Animation *animation, void *data) {
 	destroy_property_animation(&hand_animation_end);
 	destroy_property_animation(&hand_animation_end2);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",96,"schedule end animation");
-	
 	mouth_animation_end = property_animation_create_layer_frame(bitmap_layer_get_layer(mouthLayer), &mouth_to_rect, &mouth_from_rect);
 	hand_animation_end = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer1), &hand_to_rect, &hand_from_rect);
 	hand_animation_end2 = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer2), &hand_to_rect, &hand_from_rect);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",102,"schedule end animation2");
-	
 	animation_set_duration((Animation*)mouth_animation_end, 500);
 	animation_set_duration((Animation*)hand_animation_end, 1000);
 	animation_set_duration((Animation*)hand_animation_end2, 1000);
-	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",108,"schedule end animation3");
 
 	animation_set_curve((Animation*)mouth_animation_end,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_end,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_end2,AnimationCurveEaseOut);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",114,"schedule end animation4");
-	
 	
 	animation_schedule((Animation*)mouth_animation_end);
 	animation_schedule((Animation*)hand_animation_end);
 	animation_schedule((Animation*)hand_animation_end2);
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",120,"schedule end animation5");
 
 }
 
@@ -141,12 +128,14 @@ static void handle_battery(BatteryChargeState charge_state) {
 }
 
 static void handle_bluetooth(bool connected) {
-	if (persist_read_bool(KEY_SHOW_BT)){
+	if (!connected && persist_read_bool(KEY_VIBE_BT)){
+		vibes_long_pulse();
+	}
+	if (!persist_read_bool(KEY_SHOW_BT)){
 		if (bitmap_layer_get_bitmap(bluetoothLayer) == nothing){
 			return;
 		}
 	}
-		
 	
 	Layer *rootLayer = window_get_root_layer(window);
 	layer_remove_from_parent(bitmap_layer_get_layer(bluetoothLayer));
@@ -156,7 +145,7 @@ static void handle_bluetooth(bool connected) {
 	#if defined(PBL_COLOR)
 	bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
 	#endif
-		
+	
 	if (persist_read_bool(KEY_SHOW_BT)) {
 		if (connected) {
 			bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
@@ -189,24 +178,17 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	destroy_property_animation(&hand_animation_beg);
 	destroy_property_animation(&hand_animation_beg2);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation");
-	
 	mouth_animation_beg = property_animation_create_layer_frame(bitmap_layer_get_layer(mouthLayer), &mouth_from_rect, &mouth_to_rect);
 	hand_animation_beg = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer1), &hand_from_rect, &hand_to_rect);
 	hand_animation_beg2 = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer2), &hand_from_rect, &hand_to_rect);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation2");
 	animation_set_duration((Animation*)mouth_animation_beg, 500);
 	animation_set_duration((Animation*)hand_animation_beg, 1000);
 	animation_set_duration((Animation*)hand_animation_beg2, 1000);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation3");
-	
 	animation_set_curve((Animation*)mouth_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_beg2,AnimationCurveEaseOut);
-	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation4");
 	
 	animation_set_handlers((Animation*)hand_animation_beg, (AnimationHandlers) {
 		.started = (AnimationStartedHandler) animation_started,
@@ -229,13 +211,9 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	strftime(date_text_string, sizeof(date_text_string), "%d-%b-%Y", tick_time);
 	text_layer_set_text(text_date_layer, date_text_string);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation5");
-	
 	animation_schedule((Animation*)hand_animation_beg);
 	animation_schedule((Animation*)hand_animation_beg2);
 	animation_schedule((Animation*)mouth_animation_beg);
-	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation6");
 	
 }
 
@@ -334,7 +312,12 @@ static void window_load(Window *window) {
 	layer_add_child(rootLayer, text_layer_get_layer(batterytext_layer));
 	
 	handle_battery(battery_state_service_peek());
-    handle_bluetooth(bluetooth_connection_service_peek());
+	
+	#ifdef PBL_SDK_2
+	handle_bluetooth(bluetooth_connection_service_peek());
+	#elif PBL_SDK_3
+	handle_bluetooth(connection_service_peek_pebble_app_connection());
+	#endif
 
 }
 
@@ -378,14 +361,18 @@ void update_settings() {
 		background_color = color;
 	#endif
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",387,"update setting");
+	
 	text_layer_set_text_color(text_time_layer, text_color);
 	
 	window_set_background_color(window, background_color);
 	
 	if (persist_read_bool(KEY_SHOW_DATE)) {
+		app_log(APP_LOG_LEVEL_DEBUG,"main.c",394,"show date");
 		text_layer_set_text_color(text_date_layer, text_color);
 		text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS));
 	} else {
+		app_log(APP_LOG_LEVEL_DEBUG,"main.c",398,"not show date");
 		text_layer_set_text_color(text_date_layer, background_color);
 		text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_42_MEDIUM_NUMBERS));
 	}
@@ -407,41 +394,48 @@ void update_settings() {
 	}
 	layer_add_child(rootLayer, bitmap_layer_get_layer(batteryLayer));
 	
+	#ifdef PBL_SDK_2
 	handle_bluetooth(bluetooth_connection_service_peek());
+	#elif PBL_SDK_3
+	handle_bluetooth (connection_service_peek_pebble_app_connection());
+	#endif
 	
 }
 
 static void inbox_received_handler(DictionaryIterator *iterator, void *context) {
 	// Get tuple
 	Tuple *t = dict_read_first(iterator);
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",412,"inbox");
 	
 	while (t != NULL) {
 		switch (t->key) {
 			case KEY_SHOW_DATE:
-				if (strcmp(t->value->cstring, "true") == 0) {
+				if (t->value->int8 > 0) {
+					app_log(APP_LOG_LEVEL_DEBUG,"main.c",412,"write true to KEY_SHOW_DATE");
 					persist_write_bool(KEY_SHOW_DATE, true);
-				} else if (strcmp(t->value->cstring, "false") == 0) {
+				} else {
+					app_log(APP_LOG_LEVEL_DEBUG,"main.c",412,"write false to KEY_SHOW_DATE");
 					persist_write_bool(KEY_SHOW_DATE, false);
 				}
 				break;
 			case KEY_SHOW_BT:
-				if (strcmp(t->value->cstring, "true") == 0) {
+				if (t->value->int8 > 0) {
 					persist_write_bool(KEY_SHOW_BT, true);
-				} else if (strcmp(t->value->cstring, "false") == 0) {
+				} else {
 					persist_write_bool(KEY_SHOW_BT, false);
 				}
 				break;
 			case KEY_SHOW_BATTERY:
-				if (strcmp(t->value->cstring, "true") == 0) {
+				if (t->value->int8 > 0) {
 					persist_write_bool(KEY_SHOW_BATTERY, true);
-				} else if (strcmp(t->value->cstring, "false") == 0) {
+				} else {
 					persist_write_bool(KEY_SHOW_BATTERY, false);
 				}
 				break;
 			case KEY_VIBE_BT:
-				if (strcmp(t->value->cstring, "true") == 0) {
+				if (t->value->int8 > 0) {
 					persist_write_bool(KEY_VIBE_BT, true);
-				} else if (strcmp(t->value->cstring, "false") == 0) {
+				} else {
 					persist_write_bool(KEY_VIBE_BT, false);
 				}
 				break;

@@ -53,18 +53,19 @@ Pebble.addEventListener("showConfiguration", function() {
 Pebble.addEventListener('webviewclosed', function(e) {
   // Decode and parse config data as JSON
   var options = JSON.parse(decodeURIComponent(e.response));
-  console.log('Config window returned: ', JSON.stringify(options));
-  
+  console.log('Config window returned: ' + e.response);
+	
   options.KEY_TEXT_COLOR = GColorFromHex(options.KEY_TEXT_COLOR.substring(2));
   options.KEY_BKGND_COLOR = GColorFromHex(options.KEY_BKGND_COLOR.substring(2));
-	
+  
   // Send settings to Pebble watchapp
   Pebble.sendAppMessage(options, function(){
-    console.log('Sent config data to Pebble');
 
 	options.KEY_TEXT_COLOR = '0x' + GColorToHex(options.KEY_TEXT_COLOR);
 	options.KEY_BKGND_COLOR = '0x' + GColorToHex(options.KEY_BKGND_COLOR);
-
+	
+	console.log('Send successful: ' + JSON.stringify(options));
+    
 	localStorage.setItem("localOptions", JSON.stringify(options));
   }, function() {
     console.log('Failed to send config data!');

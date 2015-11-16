@@ -65,6 +65,8 @@ void destroy_property_animation(PropertyAnimation **prop_animation) {
         animation_unschedule((Animation*) *prop_animation);
     }
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",68,"destroy_animation");
+	
 	#ifdef PBL_BW
     property_animation_destroy(*prop_animation);
 	#endif
@@ -81,6 +83,7 @@ void animation_stopped(Animation *animation, void *data) {
 	(void)animation;
 	(void)data;
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",86,"schedule stop animation");
 	
 	memcpy(time_text, time_text_buffer, strlen(time_text)+1);
     text_layer_set_text(text_time_layer, time_text);
@@ -90,24 +93,31 @@ void animation_stopped(Animation *animation, void *data) {
 	destroy_property_animation(&hand_animation_end);
 	destroy_property_animation(&hand_animation_end2);
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",96,"schedule end animation");
+	
 	mouth_animation_end = property_animation_create_layer_frame(bitmap_layer_get_layer(mouthLayer), &mouth_to_rect, &mouth_from_rect);
 	hand_animation_end = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer1), &hand_to_rect, &hand_from_rect);
 	hand_animation_end2 = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer2), &hand_to_rect, &hand_from_rect);
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",102,"schedule end animation2");
+	
 	animation_set_duration((Animation*)mouth_animation_end, 500);
 	animation_set_duration((Animation*)hand_animation_end, 1000);
 	animation_set_duration((Animation*)hand_animation_end2, 1000);
+	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",108,"schedule end animation3");
 
-	animation_set_curve((Animation*)mouth_animation_beg,AnimationCurveEaseOut);
+	animation_set_curve((Animation*)mouth_animation_end,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_end,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_end2,AnimationCurveEaseOut);
 	
-	app_log(APP_LOG_LEVEL_DEBUG,"main.c",109,"schedule stop animation");
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",114,"schedule end animation4");
+	
 	
 	animation_schedule((Animation*)mouth_animation_end);
 	animation_schedule((Animation*)hand_animation_end);
 	animation_schedule((Animation*)hand_animation_end2);
-	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",120,"schedule end animation5");
 
 }
 
@@ -131,56 +141,45 @@ static void handle_battery(BatteryChargeState charge_state) {
 }
 
 static void handle_bluetooth(bool connected) {
-	int change_to = 0;
+	if (persist_read_bool(KEY_SHOW_BT)){
+		if (bitmap_layer_get_bitmap(bluetoothLayer) == nothing){
+			return;
+		}
+	}
+		
 	
+	Layer *rootLayer = window_get_root_layer(window);
+	layer_remove_from_parent(bitmap_layer_get_layer(bluetoothLayer));
+	bitmap_layer_destroy(bluetoothLayer);
+	
+	bluetoothLayer = bitmap_layer_create(bluetooth_rect);
+	#if defined(PBL_COLOR)
+	bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
+	#endif
+		
 	if (persist_read_bool(KEY_SHOW_BT)) {
 		if (connected) {
-			if (strcmp(current_bluetooth_status,"connected") != 0 ){
-			 change_to = 1;
-			 strcpy(current_bluetooth_status, "connected");
-			}
-		} else if (strcmp(current_bluetooth_status,"disconnected") != 0 ){
-			 change_to = 2;
-			 strcpy(current_bluetooth_status, "disconnected");
+			bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
+		} else{ 
+			bitmap_layer_set_bitmap(bluetoothLayer, disconnect);
 		}
-	}else if (strcmp(current_bluetooth_status,"invisible") != 0 ){
-		 change_to = 3;
-		 strcpy(current_bluetooth_status, "invisible");
+	}else {
+		bitmap_layer_set_bitmap(bluetoothLayer, nothing);
 	}
 	
-	if (change_to != 0) {
-		Layer *rootLayer = window_get_root_layer(window);
-		layer_remove_from_parent(bitmap_layer_get_layer(bluetoothLayer));
-		bitmap_layer_destroy(bluetoothLayer);
-			
-		bluetoothLayer = bitmap_layer_create(bluetooth_rect);
-		#if defined(PBL_COLOR)
-		bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
-		#endif
-		
-		switch (change_to){
-			case 1:
-				bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
-				break;
-			case 2:
-				bitmap_layer_set_bitmap(bluetoothLayer, disconnect);
-				if (persist_read_bool(KEY_VIBE_BT)) {
-				vibes_long_pulse();
-				}
-				break;
-			case 3:
-				bitmap_layer_set_bitmap(bluetoothLayer, nothing);
-				break;
-		}
-		
-		layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
-		layer_mark_dirty(bitmap_layer_get_layer(bluetoothLayer));
-	}
+	layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
+	layer_mark_dirty(bitmap_layer_get_layer(bluetoothLayer));
+	
 }
 
 static void handle_appfocus(bool in_focus){
 	if (in_focus){
-	 handle_bluetooth(bluetooth_connection_service_peek());
+	#ifdef PBL_SDK_2
+	handle_bluetooth(bluetooth_connection_service_peek());
+	#elif PBL_SDK_3
+	handle_bluetooth (connection_service_peek_pebble_app_connection());
+	#endif
+	
     }
 }
 
@@ -190,18 +189,24 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	destroy_property_animation(&hand_animation_beg);
 	destroy_property_animation(&hand_animation_beg2);
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation");
+	
 	mouth_animation_beg = property_animation_create_layer_frame(bitmap_layer_get_layer(mouthLayer), &mouth_from_rect, &mouth_to_rect);
 	hand_animation_beg = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer1), &hand_from_rect, &hand_to_rect);
 	hand_animation_beg2 = property_animation_create_layer_frame(bitmap_layer_get_layer(handLayer2), &hand_from_rect, &hand_to_rect);
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation2");
 	animation_set_duration((Animation*)mouth_animation_beg, 500);
 	animation_set_duration((Animation*)hand_animation_beg, 1000);
 	animation_set_duration((Animation*)hand_animation_beg2, 1000);
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation3");
 	
 	animation_set_curve((Animation*)mouth_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_beg,AnimationCurveEaseOut);
 	animation_set_curve((Animation*)hand_animation_beg2,AnimationCurveEaseOut);
+	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation4");
 	
 	animation_set_handlers((Animation*)hand_animation_beg, (AnimationHandlers) {
 		.started = (AnimationStartedHandler) animation_started,
@@ -224,10 +229,13 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	strftime(date_text_string, sizeof(date_text_string), "%d-%b-%Y", tick_time);
 	text_layer_set_text(text_date_layer, date_text_string);
 	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation5");
 	
 	animation_schedule((Animation*)hand_animation_beg);
 	animation_schedule((Animation*)hand_animation_beg2);
 	animation_schedule((Animation*)mouth_animation_beg);
+	
+	app_log(APP_LOG_LEVEL_DEBUG,"main.c",202,"schedule begin animation6");
 	
 }
 
@@ -491,7 +499,15 @@ static void init(void) {
     window_stack_push(window, animated);
 	tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
 	battery_state_service_subscribe(&handle_battery);
-    bluetooth_connection_service_subscribe(&handle_bluetooth);
+	
+	#ifdef PBL_SDK_2
+	bluetooth_connection_service_subscribe(handle_bluetooth);
+	#elif PBL_SDK_3
+	connection_service_subscribe((ConnectionHandlers) {
+	  .pebble_app_connection_handler = handle_bluetooth
+	});
+	#endif
+	
     app_focus_service_subscribe(&handle_appfocus);
 	
 	// Initially show the correct settings
@@ -502,7 +518,13 @@ static void init(void) {
 static void deinit(void) {
 	tick_timer_service_unsubscribe();
     battery_state_service_unsubscribe();
-    bluetooth_connection_service_unsubscribe();
+	
+	#ifdef PBL_SDK_2
+	bluetooth_connection_service_unsubscribe();
+	#elif PBL_SDK_3
+	connection_service_unsubscribe();
+	#endif
+	
 	app_focus_service_unsubscribe();
     window_stack_remove(window, false);
     window_destroy(window);

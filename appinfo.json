@@ -1,9 +1,12 @@
 {
     "appKeys": {
         "KEY_BKGND_COLOR": 5,
+        "KEY_HOURLY_VIBE": 9,
+        "KEY_PHONE_BATTERY": 8,
         "KEY_SHOW_BATTERY": 2,
         "KEY_SHOW_BT": 3,
         "KEY_SHOW_DATE": 1,
+        "KEY_SHOW_PHONE_BATT": 7,
         "KEY_TEXT_COLOR": 6,
         "KEY_VIBE_BT": 4
     },
@@ -19,42 +22,42 @@
                 "file": "images/menu_icon.png",
                 "menuIcon": true,
                 "name": "IMAGE_MENU_ICON",
-                "type": "png"
-            },
-            {
-                "file": "images/disconnectt.png",
-                "name": "IMAGE_DISCONNECT_2",
-                "type": "png"
-            },
-            {
-                "file": "images/bluetootht.png",
-                "name": "IMAGE_BLUETOOTH_2",
-                "type": "png"
-            },
-            {
-                "file": "images/batteryt.png",
-                "name": "IMAGE_BATTERY_2",
-                "type": "png"
+                "type": "bitmap"
             },
             {
                 "file": "images/background_s.png",
                 "name": "IMAGE_NEKO_SMALL",
-                "type": "png"
+                "type": "bitmap"
             },
             {
                 "file": "images/nothingt.png",
                 "name": "IMAGE_NOTHING_2",
-                "type": "png"
+                "type": "bitmap"
             },
             {
                 "file": "images/mouth.png",
                 "name": "IMAGE_MOUTH",
-                "type": "png"
+                "type": "bitmap"
             },
             {
                 "file": "images/lip.png",
                 "name": "IMAGE_LIP",
-                "type": "png"
+                "type": "bitmap"
+            },
+            {
+                "file": "images/disconnectt.png",
+                "name": "IMAGE_DISCONNECT_2",
+                "type": "bitmap"
+            },
+            {
+                "file": "images/bluetootht.png",
+                "name": "IMAGE_BLUETOOTH_2",
+                "type": "bitmap"
+            },
+            {
+                "file": "images/batteryt.png",
+                "name": "IMAGE_BATTERY_2",
+                "type": "bitmap"
             },
             {
                 "file": "images/hand.png",

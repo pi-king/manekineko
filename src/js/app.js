@@ -90,12 +90,12 @@ Pebble.addEventListener('ready', function (e) {
 Pebble.addEventListener("showConfiguration", function() {
   console.log("showing configuration");
 	var localoptions;
+	var url;
 	if (localStorage.getItem("localOptions") === null) {
-		console.log('https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html?first_start=yes');
-		Pebble.openURL('https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html?first_start=yes');
+		url = 'https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html?first_start=yes';
 	}else {
 		localoptions = JSON.parse(localStorage.getItem("localOptions"));
-		console.log('https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html' + '?' +
+		url = 'https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html' + '?' +
 					'color_text_select=' + localoptions.KEY_TEXT_COLOR + '&' + 
 					'color_bkgnd_select=' + localoptions.KEY_BKGND_COLOR + '&' + 
 					'show_date_select=' + localoptions.KEY_SHOW_DATE + '&' + 
@@ -103,17 +103,11 @@ Pebble.addEventListener("showConfiguration", function() {
 					'show_bluetooth_select=' + localoptions.KEY_SHOW_BT + '&' + 
 					'show_phone_batt_select=' + localoptions.KEY_SHOW_PHONE_BATT + '&' + 
 					'hourly_vibe_select=' + localoptions.KEY_HOURLY_VIBE + '&' + 
-					'vibe_bt_select=' + localoptions.KEY_VIBE_BT );
-		Pebble.openURL('https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html' + '?' +
-					'color_text_select=' + localoptions.KEY_TEXT_COLOR + '&' + 
-					'color_bkgnd_select=' + localoptions.KEY_BKGND_COLOR + '&' + 
-					'show_date_select=' + localoptions.KEY_SHOW_DATE + '&' + 
-					'show_battery_select=' + localoptions.KEY_SHOW_BATTERY + '&' + 
-					'show_bluetooth_select=' + localoptions.KEY_SHOW_BT + '&' + 
-					'show_phone_batt_select=' + localoptions.KEY_SHOW_PHONE_BATT + '&' + 
-					'hourly_vibe_select=' + localoptions.KEY_HOURLY_VIBE + '&' + 
-					'vibe_bt_select=' + localoptions.KEY_VIBE_BT);
+					'vibe_bt_select=' + localoptions.KEY_VIBE_BT;
 	}
+	
+	console.log(url);
+	Pebble.openURL(url);
 
 });
 
@@ -121,20 +115,19 @@ Pebble.addEventListener('webviewclosed', function(e) {
   // Decode and parse config data as JSON
   var options = JSON.parse(decodeURIComponent(e.response));
   options.KEY_PHONE_BATTERY = getBatteryStateInt();
-  console.log('Config window returned: ' + e.response);
+  console.log('Config window returned: ' + options.KEY_TEXT_COLOR);
 	
   options.KEY_TEXT_COLOR = GColorFromHex(options.KEY_TEXT_COLOR.substring(2));
   options.KEY_BKGND_COLOR = GColorFromHex(options.KEY_BKGND_COLOR.substring(2));
   
   // Send settings to Pebble watchapp
   Pebble.sendAppMessage(options, function(){
-
 	options.KEY_TEXT_COLOR = '0x' + GColorToHex(options.KEY_TEXT_COLOR);
 	options.KEY_BKGND_COLOR = '0x' + GColorToHex(options.KEY_BKGND_COLOR);
 	
 	console.log('Send successful: ' + JSON.stringify(options));
 	localStorage.setItem("localOptions", JSON.stringify(options));
-  }, function() {
-    console.log('Failed to send config data!');
+  }, function(e) {
+    console.log('Message failed: ' + JSON.stringify(e));
   });
 });

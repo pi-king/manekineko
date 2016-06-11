@@ -290,19 +290,14 @@ static void window_load(Window *window) {
 	battery = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BATTERY_2);
 	nothing = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_NOTHING_2);
 	
-	//don't know why but position is different in APLITE&BASALT
-	#if defined(PBL_BW)
-		neko_rect = GRect(23, 0, 105, 130); 
-	#elif defined(PBL_COLOR)
-		neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0, 105, 130);
-	#endif
+	neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0, 105, 130);
 	
 	mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52, 12, 8);
 	mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59, 12, 8);
 	hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30, 37, 27);
 	hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45, 37, 27);
 	lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47, 16, 13);  //mouth x-2 y-5
-	battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,5),20,20);
+	battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,1),20,20);
 	bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,121),PBL_IF_ROUND_ELSE(82,2),20,20);
 	
 	batteryLayer = bitmap_layer_create(battery_rect);
@@ -480,7 +475,7 @@ void update_settings() {
 
 
 static void init_sync() {
-  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+  
 	
   // setup initial value
   Tuplet initial_values[] = {
@@ -502,6 +497,8 @@ static void init_sync() {
   uint32_t size = dict_calc_buffer_size_from_tuplets(initial_values, ARRAY_LENGTH(initial_values));
   s_sync_buffer = malloc(size * sizeof(uint8_t));
   
+  app_message_open(size << 1, 0);
+	
   // Begin using AppSync
   app_sync_init(&s_sync, s_sync_buffer, size, initial_values, ARRAY_LENGTH(initial_values), sync_changed_handler, sync_error_handler, NULL);
 }

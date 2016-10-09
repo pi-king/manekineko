@@ -9,29 +9,29 @@
         ],
         "displayName": "Manekineko",
         "enableMultiJS": true,
-        "messageKeys": {
-            "KEY_BKGND_COLOR": 5,
-            "KEY_HOURLY_VIBE": 9,
-            "KEY_PHONE_BATTERY": 8,
-            "KEY_SHOW_BATTERY": 2,
-            "KEY_SHOW_BT": 3,
-            "KEY_SHOW_DATE": 1,
-            "KEY_SHOW_PHONE_BATT": 7,
-            "KEY_TEXT_COLOR": 6,
-            "KEY_VIBE_BT": 4
-        },
+        "messageKeys": [
+            "KEY_SHOW_DATE",
+            "KEY_SHOW_BATTERY",
+            "KEY_SHOW_BT",
+            "KEY_VIBE_BT",
+            "KEY_BKGND_COLOR",
+            "KEY_TEXT_COLOR",
+            "KEY_SHOW_PHONE_BATT",
+            "KEY_PHONE_BATTERY",
+            "KEY_HOURLY_VIBE"
+        ],
         "projectType": "native",
         "resources": {
             "media": [
                 {
                     "file": "images/menu_icon.png",
-                    "menuIcon": true,
                     "name": "IMAGE_MENU_ICON",
                     "type": "bitmap"
                 },
                 {
                     "file": "images/background_s.png",
                     "name": "IMAGE_NEKO_SMALL",
+                    "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
@@ -57,6 +57,7 @@
                 {
                     "file": "images/bluetootht.png",
                     "name": "IMAGE_BLUETOOTH_2",
+                    "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
@@ -76,7 +77,8 @@
         "targetPlatforms": [
             "aplite",
             "basalt",
-            "chalk"
+            "chalk",
+            "diorite"
         ],
         "uuid": "7c27100a-aefd-4813-8e02-b0fc1596369b",
         "watchapp": {

@@ -68,6 +68,11 @@ static GRect hand_to_rect;
 static GRect lip_rect;
 static GRect battery_rect;
 static GRect bluetooth_rect;
+static GRect batterytext_rect;
+static GRect phone_batterytext_rect;		
+static GRect text_date_rect;
+static GRect text_time_rect;
+
 static char time_text[] = "00:00";
 static char time_text_buffer[] = "00:00";
 static char date_text_string[12];
@@ -277,9 +282,74 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	
 }
 
-static void window_load(Window *window) {
+void updateLayers(){
+	layer_set_frame(text_layer_get_layer(text_time_layer), text_time_rect);
+	layer_set_frame(text_layer_get_layer(text_date_layer), text_date_rect);
+	layer_set_frame(text_layer_get_layer(batterytext_layer), batterytext_rect);
+	layer_set_frame(text_layer_get_layer(phone_batterytext_layer), phone_batterytext_rect);
+	layer_set_frame(bitmap_layer_get_layer(handLayer1), hand_from_rect);
+	layer_set_frame(bitmap_layer_get_layer(handLayer2), hand_from_rect);
+	layer_set_frame(bitmap_layer_get_layer(nekoLayer), neko_rect);
+	layer_set_frame(bitmap_layer_get_layer(lipLayer), lip_rect);
+	layer_set_frame(bitmap_layer_get_layer(mouthLayer), mouth_from_rect);
+	layer_set_frame(bitmap_layer_get_layer(batteryLayer), battery_rect);
+	layer_set_frame(bitmap_layer_get_layer(bluetoothLayer), bluetooth_rect);
+}
 
+void calLayersPosition() {
+	bool quickViewAppeared = false;
+	int quickViewHeightDiff = 0;
+	
     Layer *rootLayer = window_get_root_layer(window);
+	
+	GRect fullscreen = layer_get_bounds(rootLayer);
+    GRect unobstructed_bounds = layer_get_unobstructed_bounds(rootLayer);
+	quickViewHeightDiff = fullscreen.size.h - unobstructed_bounds.size.h;
+	if (quickViewHeightDiff > 0){
+		quickViewAppeared = true;
+	}
+	
+  if (!quickViewAppeared){
+		neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0, 105, 130);
+		mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52, 12, 8);
+		mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59, 12, 8);
+		hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30, 37, 27);
+		hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45, 37, 27);
+		lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47, 16, 13);  //mouth x-2 y-5
+		
+		battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,1),20,20);
+		bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,121),PBL_IF_ROUND_ELSE(82,2),20,20);
+    	batterytext_rect = GRect(PBL_IF_ROUND_ELSE(10,3),PBL_IF_ROUND_ELSE(90,18),30,20);
+    	phone_batterytext_rect = GRect(PBL_IF_ROUND_ELSE(145,119),PBL_IF_ROUND_ELSE(90,18),25,20);
+		
+		text_date_rect = GRect(0, 145, PBL_IF_ROUND_ELSE(180,144), 35);
+    	text_time_rect = GRect(0, 115, PBL_IF_ROUND_ELSE(180,144), 53);
+	}else{
+		neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0 + quickViewHeightDiff, 105, 130);
+		mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52 + quickViewHeightDiff, 12, 8);
+		mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59 + quickViewHeightDiff, 12, 8);
+		hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30 + quickViewHeightDiff, 37, 27);
+		hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45 + quickViewHeightDiff, 37, 27);
+		lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47 + quickViewHeightDiff, 16, 13);  //mouth x-2 y-5
+		
+		battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,1 + quickViewHeightDiff),20,20);
+		bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,121),PBL_IF_ROUND_ELSE(82,2 + quickViewHeightDiff),20,20);
+    	batterytext_rect = GRect(PBL_IF_ROUND_ELSE(10,3),PBL_IF_ROUND_ELSE(90,18 + quickViewHeightDiff),30,20);
+    	phone_batterytext_rect = GRect(PBL_IF_ROUND_ELSE(145,119),PBL_IF_ROUND_ELSE(90,18 + quickViewHeightDiff),25,20);
+		
+		text_date_rect = GRect(0, 30, PBL_IF_ROUND_ELSE(180,144), 35);
+    	text_time_rect = GRect(0, 0, PBL_IF_ROUND_ELSE(180,144), 53);
+	}
+}
+
+static void prv_unobstructed_did_change(void *context) {
+	calLayersPosition();
+	updateLayers();
+}
+
+static void window_load(Window *window) {
+	Layer *rootLayer = window_get_root_layer(window);
+	calLayersPosition();
 	
 	neko = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_NEKO_SMALL);
     mouth = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_MOUTH);
@@ -289,16 +359,6 @@ static void window_load(Window *window) {
 	disconnect = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_DISCONNECT_2);
 	battery = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BATTERY_2);
 	nothing = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_NOTHING_2);
-	
-	neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0, 105, 130);
-	
-	mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52, 12, 8);
-	mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59, 12, 8);
-	hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30, 37, 27);
-	hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45, 37, 27);
-	lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47, 16, 13);  //mouth x-2 y-5
-	battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,1),20,20);
-	bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,121),PBL_IF_ROUND_ELSE(82,2),20,20);
 	
 	batteryLayer = bitmap_layer_create(battery_rect);
 	#if defined(PBL_COLOR)
@@ -343,34 +403,34 @@ static void window_load(Window *window) {
 	
 	layer_add_child(rootLayer, bitmap_layer_get_layer(handLayer1));
 	layer_add_child(rootLayer, bitmap_layer_get_layer(handLayer2));
+	
+	batterytext_layer = text_layer_create(batterytext_rect);
+    phone_batterytext_layer = text_layer_create(phone_batterytext_rect);
 		
-	text_date_layer = text_layer_create(GRect(0, 145, PBL_IF_ROUND_ELSE(180,144), 35));
-    text_layer_set_text_color(text_date_layer, text_color);
+	text_date_layer = text_layer_create(text_date_rect);
+    text_time_layer = text_layer_create(text_time_rect);
+	
+	text_layer_set_text_color(text_date_layer, text_color);
     text_layer_set_background_color(text_date_layer, GColorClear);
     text_layer_set_text_alignment(text_date_layer, GTextAlignmentCenter);
     text_layer_set_font(text_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
     layer_add_child(rootLayer, text_layer_get_layer(text_date_layer));
 	
 	
-	text_time_layer = text_layer_create(GRect(0, 115, PBL_IF_ROUND_ELSE(180,144), 53));
-    text_layer_set_text_color(text_time_layer, text_color);
+	text_layer_set_text_color(text_time_layer, text_color);
     text_layer_set_background_color(text_time_layer, GColorClear);
     text_layer_set_text_alignment(text_time_layer, GTextAlignmentCenter);
     text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS));
     layer_add_child(rootLayer, text_layer_get_layer(text_time_layer));
 	
-	//battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,5),20,20);
-	batterytext_layer = text_layer_create(GRect(PBL_IF_ROUND_ELSE(10,3),PBL_IF_ROUND_ELSE(90,18),30,20));
-    text_layer_set_text_color(batterytext_layer, text_color);
+	text_layer_set_text_color(batterytext_layer, text_color);
     text_layer_set_background_color(batterytext_layer, GColorClear);
     text_layer_set_font(batterytext_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
     text_layer_set_text_alignment(batterytext_layer, GTextAlignmentCenter);
 	layer_add_child(rootLayer, text_layer_get_layer(batterytext_layer));
 	
 	
-	//bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,122),PBL_IF_ROUND_ELSE(82,2),20,20);
-	phone_batterytext_layer = text_layer_create(GRect(PBL_IF_ROUND_ELSE(145,119),PBL_IF_ROUND_ELSE(90,18),25,20));
-    text_layer_set_text_color(phone_batterytext_layer, text_color);
+	text_layer_set_text_color(phone_batterytext_layer, text_color);
     text_layer_set_background_color(phone_batterytext_layer, GColorClear);
     text_layer_set_font(phone_batterytext_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
     text_layer_set_text_alignment(phone_batterytext_layer, GTextAlignmentCenter);
@@ -650,11 +710,17 @@ static void init(void) {
 	battery_state_service_subscribe(&handle_battery);
 	
 	#ifdef PBL_SDK_2
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "SDK2");
 	bluetooth_connection_service_subscribe(handle_bluetooth);
 	#elif PBL_SDK_3
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "SDK3");
 	connection_service_subscribe((ConnectionHandlers) {
 	  .pebble_app_connection_handler = handle_bluetooth
 	});
+	UnobstructedAreaHandlers handler = {
+    .did_change = prv_unobstructed_did_change
+  	};
+  	unobstructed_area_service_subscribe(handler, NULL);
 	#endif
 	
 	// init AppSync
@@ -675,6 +741,7 @@ static void deinit(void) {
 	bluetooth_connection_service_unsubscribe();
 	#elif PBL_SDK_3
 	connection_service_unsubscribe();
+	unobstructed_area_service_unsubscribe();
 	#endif
 	
 	deinit_sync();

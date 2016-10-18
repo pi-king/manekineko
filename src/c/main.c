@@ -79,15 +79,11 @@ static char date_text_string[12];
 static int current_battery_level=-1;
 
 static bool is_phone_charging;
-static AppSync s_sync;
-static uint8_t* s_sync_buffer;
 static bool s_battery_api_supported = false;
-static void init_sync();
-static void deinit_sync();
-static void sync_changed_handler(const uint32_t key, const Tuple *new_tuple, const Tuple *old_tuple, void *context);
-static void sync_error_handler(DictionaryResult dict_error, AppMessageResult app_message_error, void *context);
+static void init_app_message();
+static void inbox_received_callback(DictionaryIterator *iterator, void *context);
+static void inbox_dropped_callback(AppMessageResult reason, void *context);
 static void update_phone_battery(uint8_t state);
-
 
 static GColor text_color;
 static GColor background_color;
@@ -100,7 +96,7 @@ void destroy_property_animation(PropertyAnimation **prop_animation) {
         animation_unschedule((Animation*) *prop_animation);
     }
 	
-	#ifdef PBL_BW
+	#if defined(PBL_BW)
     property_animation_destroy(*prop_animation);
 	#endif
 	
@@ -164,6 +160,7 @@ static void handle_battery(BatteryChargeState charge_state) {
 		}
 	}
 	text_layer_set_text(batterytext_layer, battery_text);
+	layer_mark_dirty( text_layer_get_layer(batterytext_layer));
 }
 
 static void handle_bluetooth(bool connected) {
@@ -224,12 +221,7 @@ void phone_battery_layer_update(uint8_t state) {
 
 static void handle_appfocus(bool in_focus){
 	if (in_focus){
-	#ifdef PBL_SDK_2
-	handle_bluetooth(bluetooth_connection_service_peek());
-	#elif PBL_SDK_3
-	handle_bluetooth (connection_service_peek_pebble_app_connection());
-	#endif
-	
+		handle_bluetooth (connection_service_peek_pebble_app_connection());
     }
 }
 
@@ -438,11 +430,7 @@ static void window_load(Window *window) {
 	
 	handle_battery(battery_state_service_peek());
 	
-	#ifdef PBL_SDK_2
-	handle_bluetooth(bluetooth_connection_service_peek());
-	#elif PBL_SDK_3
 	handle_bluetooth(connection_service_peek_pebble_app_connection());
-	#endif
 
 }
 
@@ -525,17 +513,11 @@ void update_settings() {
 	}
 	layer_mark_dirty( text_layer_get_layer(phone_batterytext_layer));
 	
-	#ifdef PBL_SDK_2
-	handle_bluetooth(bluetooth_connection_service_peek());
-	#elif PBL_SDK_3
 	handle_bluetooth(connection_service_peek_pebble_app_connection());
-	#endif
-	
 }
 
 
-static void init_sync() {
-  
+static void init_app_message() {
 	
   // setup initial value
   Tuplet initial_values[] = {
@@ -551,110 +533,122 @@ static void init_sync() {
 	  TupletInteger(KEY_HOURLY_VIBE, persist_read_bool(KEY_HOURLY_VIBE)  ? 1 : 0)
 	  
   };
-	
   
-  // create buffer
+  // calculate size of buffer
   uint32_t size = dict_calc_buffer_size_from_tuplets(initial_values, ARRAY_LENGTH(initial_values));
-  s_sync_buffer = malloc(size * sizeof(uint8_t));
   
-  app_message_open(size << 1, 0);
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "size of buffer is %lu", size * sizeof(uint8_t));
 	
-  // Begin using AppSync
-  app_sync_init(&s_sync, s_sync_buffer, size, initial_values, ARRAY_LENGTH(initial_values), sync_changed_handler, sync_error_handler, NULL);
+	// Register callbacks
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+	
+	app_message_open(size << 1, 0);
 }
 
-static void deinit_sync() {
-  app_sync_deinit(&s_sync);
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  // A message was received, but had to be dropped
+	APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped. Reason: %d", (int)reason);
 }
 
-static void sync_changed_handler(const uint32_t key, const Tuple *new_tuple, const Tuple *old_tuple, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "sync_changed_handler called %lu", (unsigned long)key);
-	switch (key) {
-		case KEY_PHONE_BATTERY:
-		{
-		  update_phone_battery(new_tuple->value->int8);
-		}
-		break;
-    
-	case KEY_SHOW_DATE:
-		if (persist_read_bool(KEY_SHOW_DATE) != new_tuple->value->int8){
-			if (new_tuple->value->int8 > 0) {
-				persist_write_bool(KEY_SHOW_DATE, true);
-			} else {
-				persist_write_bool(KEY_SHOW_DATE, false);
-			}
-			update_settings();
-		}
-		break;
-	case KEY_SHOW_BT:
-		if (persist_read_bool(KEY_SHOW_BT) != new_tuple->value->int8){
-			if (new_tuple->value->int8 > 0) {
-				persist_write_bool(KEY_SHOW_BT, true);
-			} else {
-			persist_write_bool(KEY_SHOW_BT, false);
-			}
-			update_settings();
-		}
-		break;
-	case KEY_SHOW_BATTERY:
-		if (persist_read_bool(KEY_SHOW_BATTERY) != new_tuple->value->int8){
-			if (new_tuple->value->int8 > 0) {
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  Tuple *show_battery_tuple = dict_find(iterator, MESSAGE_KEY_KEY_SHOW_BATTERY);
+  if(show_battery_tuple != NULL) {
+	  if (persist_read_bool(KEY_SHOW_BATTERY) != (bool)show_battery_tuple->value->int8){
+	  		if (show_battery_tuple->value->int8 > 0) {
 				persist_write_bool(KEY_SHOW_BATTERY, true);
 			} else {
 				persist_write_bool(KEY_SHOW_BATTERY, false);
 			}
 			update_settings();
-		}
-		break;
-	case KEY_VIBE_BT:
-		if (persist_read_bool(KEY_VIBE_BT) != new_tuple->value->int8){
-			if (new_tuple->value->int8 > 0) {
+	  }
+  }
+	
+	Tuple *show_date_tuple = dict_find(iterator, MESSAGE_KEY_KEY_SHOW_DATE);
+  if(show_date_tuple != NULL) {
+	  if (persist_read_bool(KEY_SHOW_DATE) != (bool)show_date_tuple->value->int8){
+	  		if (show_date_tuple->value->int8 > 0) {
+				persist_write_bool(KEY_SHOW_DATE, true);
+			} else {
+				persist_write_bool(KEY_SHOW_DATE, false);
+			}
+			update_settings();
+	  }
+  }
+	
+	Tuple *show_bt_tuple = dict_find(iterator, MESSAGE_KEY_KEY_SHOW_BT);
+  if(show_bt_tuple != NULL) {
+	  if (persist_read_bool(KEY_SHOW_BT) != (bool)show_bt_tuple->value->int8){
+	  		if (show_bt_tuple->value->int8 > 0) {
+				persist_write_bool(KEY_SHOW_BT, true);
+			} else {
+				persist_write_bool(KEY_SHOW_BT, false);
+			}
+			update_settings();
+	  }
+  }
+	
+	Tuple *vibe_bt_tuple = dict_find(iterator, MESSAGE_KEY_KEY_VIBE_BT);
+  if(vibe_bt_tuple != NULL) {
+	  if (persist_read_bool(KEY_VIBE_BT) != (bool)vibe_bt_tuple->value->int8){
+	  		if (vibe_bt_tuple->value->int8 > 0) {
 				persist_write_bool(KEY_VIBE_BT, true);
 			} else {
 				persist_write_bool(KEY_VIBE_BT, false);
 			}
 			update_settings();
-		}
-		break;
-	case KEY_SHOW_PHONE_BATT:
-		if (persist_read_bool(KEY_SHOW_PHONE_BATT) != new_tuple->value->int8){
-			if (new_tuple->value->int8 > 0) {
+	  }
+  }
+	
+	Tuple *show_phone_batt_tuple = dict_find(iterator, MESSAGE_KEY_KEY_SHOW_PHONE_BATT);
+  if(show_phone_batt_tuple != NULL) {
+	  if (persist_read_bool(KEY_SHOW_PHONE_BATT) != (bool)show_phone_batt_tuple->value->int8){
+	  		if (show_phone_batt_tuple->value->int8 > 0) {
 				persist_write_bool(KEY_SHOW_PHONE_BATT, true);
 			} else {
 				persist_write_bool(KEY_SHOW_PHONE_BATT, false);
 			}
 			update_settings();
-		}
-				break;
-	  case KEY_HOURLY_VIBE:
-		if (persist_read_bool(KEY_HOURLY_VIBE) != new_tuple->value->int8){
-			if (new_tuple->value->int8 > 0) {
+	  }
+  }
+	
+	Tuple *hourly_vibe_tuple = dict_find(iterator, MESSAGE_KEY_KEY_HOURLY_VIBE);
+  if(hourly_vibe_tuple != NULL) {
+	  if (persist_read_bool(KEY_HOURLY_VIBE) != (bool)hourly_vibe_tuple->value->int8){
+	  		if (hourly_vibe_tuple->value->int8 > 0) {
 				persist_write_bool(KEY_HOURLY_VIBE, true);
 			} else {
 				persist_write_bool(KEY_HOURLY_VIBE, false);
 			}
 			update_settings();
-		}
-		break;
-	case KEY_TEXT_COLOR:
-		if (persist_read_int(KEY_TEXT_COLOR) != new_tuple->value->int32){
-			persist_write_int(KEY_TEXT_COLOR, new_tuple->value->int32);
+	  }
+  }
+	
+	Tuple *phone_battery_tuple = dict_find(iterator, MESSAGE_KEY_KEY_PHONE_BATTERY);
+  if(phone_battery_tuple != NULL) {
+		update_phone_battery(phone_battery_tuple->value->int8);
+  }
+	  
+	  Tuple *background_color_tuple = dict_find(iterator, MESSAGE_KEY_KEY_BKGND_COLOR);
+  if(background_color_tuple != NULL) {
+	  if (persist_read_int(KEY_BKGND_COLOR) != background_color_tuple->value->int32){
+		  if (persist_read_int(KEY_BKGND_COLOR) != background_color_tuple->value->int32){
+			persist_write_int(KEY_BKGND_COLOR, background_color_tuple->value->int32);
 			update_settings();
-		}
-		break;
-	case KEY_BKGND_COLOR:
-		if (persist_read_int(KEY_BKGND_COLOR) != new_tuple->value->int32){
-			persist_write_int(KEY_BKGND_COLOR, new_tuple->value->int32);
-			update_settings();
-		}
-		break;  		
+		  }
+	  }
+  }
+	  
+	Tuple *text_color_tuple = dict_find(iterator, MESSAGE_KEY_KEY_TEXT_COLOR);
+  if(text_color_tuple != NULL) {
+	if (persist_read_int(KEY_TEXT_COLOR) != text_color_tuple->value->int32){
+		persist_write_int(KEY_TEXT_COLOR, text_color_tuple->value->int32);
+		update_settings();
 	}
+  }
 	
 }
 
-static void sync_error_handler(DictionaryResult dict_error, AppMessageResult app_message_error, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "sync_error %d", dict_error);
-}
 
 static void update_phone_battery(uint8_t state) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "get battery state: %d, %d", state & CHARGING_MASK, state & LEVEL_MASK);
@@ -709,10 +703,6 @@ static void init(void) {
 	tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
 	battery_state_service_subscribe(&handle_battery);
 	
-	#ifdef PBL_SDK_2
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "SDK2");
-	bluetooth_connection_service_subscribe(handle_bluetooth);
-	#elif PBL_SDK_3
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "SDK3");
 	connection_service_subscribe((ConnectionHandlers) {
 	  .pebble_app_connection_handler = handle_bluetooth
@@ -721,10 +711,8 @@ static void init(void) {
     .did_change = prv_unobstructed_did_change
   	};
   	unobstructed_area_service_subscribe(handler, NULL);
-	#endif
 	
-	// init AppSync
-    init_sync();
+    init_app_message();
 	
     app_focus_service_subscribe(&handle_appfocus);
 	
@@ -737,14 +725,8 @@ static void deinit(void) {
 	tick_timer_service_unsubscribe();
     battery_state_service_unsubscribe();
 	
-	#ifdef PBL_SDK_2
-	bluetooth_connection_service_unsubscribe();
-	#elif PBL_SDK_3
 	connection_service_unsubscribe();
 	unobstructed_area_service_unsubscribe();
-	#endif
-	
-	deinit_sync();
 	
 	app_focus_service_unsubscribe();
     window_stack_remove(window, false);

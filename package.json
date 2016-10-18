@@ -26,6 +26,7 @@
                 {
                     "file": "images/menu_icon.png",
                     "name": "IMAGE_MENU_ICON",
+                    "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
@@ -85,5 +86,5 @@
             "watchface": true
         }
     },
-    "version": "2.5.0"
+    "version": "2.6.0"
 }

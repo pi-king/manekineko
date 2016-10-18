@@ -92,10 +92,10 @@ Pebble.addEventListener("showConfiguration", function() {
 	var localoptions;
 	var url;
 	if (localStorage.getItem("localOptions") === null) {
-		url = 'https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html?first_start=yes';
+		url = 'https://pi-king.github.io/manekineko-setting_test.html?first_start=yes';
 	}else {
 		localoptions = JSON.parse(localStorage.getItem("localOptions"));
-		url = 'https://dl.dropboxusercontent.com/s/c9fjw9kb4c5frps/manekineko-setting_test.html' + '?' +
+		url = 'https://pi-king.github.io/manekineko-setting_test.html' + '?' +
 					'color_text_select=' + localoptions.KEY_TEXT_COLOR + '&' + 
 					'color_bkgnd_select=' + localoptions.KEY_BKGND_COLOR + '&' + 
 					'show_date_select=' + localoptions.KEY_SHOW_DATE + '&' + 

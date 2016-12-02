@@ -27,8 +27,14 @@ https://github.com/programus/pebble-watchface-11weeks/blob/master/LICENSE
 #define BATTERY_API_UNSUPPORTED   0x70
 #define LEVEL_UNKNOWN   0x7f
 
+#define BASE_HEIGHT 168
+#define BASE_WIDTH 144
+#define ROUND_BASE_HEIGHT 180
+#define ROUND_BASE_WIDTH 180
 
 static Window *window;
+
+static Layer *baseLayer;
 
 static TextLayer *text_time_layer;
 static TextLayer *text_date_layer;
@@ -166,7 +172,9 @@ static void handle_battery(BatteryChargeState charge_state) {
 static void handle_bluetooth(bool connected) {
 	
 	if (!connected && persist_read_bool(KEY_VIBE_BT)){
-		vibes_long_pulse();
+		if (!quiet_time_is_active()){
+			vibes_long_pulse();
+		}
 	}
 	if (!persist_read_bool(KEY_SHOW_BT)){
 		if (bitmap_layer_get_bitmap(bluetoothLayer) == nothing){
@@ -174,14 +182,14 @@ static void handle_bluetooth(bool connected) {
 		}
 	}
 	
-	Layer *rootLayer = window_get_root_layer(window);
+	//Layer *rootLayer = window_get_root_layer(window);
 	layer_remove_from_parent(bitmap_layer_get_layer(bluetoothLayer));
 	bitmap_layer_destroy(bluetoothLayer);
 	
 	bluetoothLayer = bitmap_layer_create(bluetooth_rect);
-	#if defined(PBL_COLOR)
+	
 	bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
-	#endif
+	
 	
 	if (persist_read_bool(KEY_SHOW_BT)) {
 		if (connected) {
@@ -193,7 +201,7 @@ static void handle_bluetooth(bool connected) {
 		bitmap_layer_set_bitmap(bluetoothLayer, nothing);
 	}
 	
-	layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(bluetoothLayer));
 	layer_mark_dirty(bitmap_layer_get_layer(bluetoothLayer));
 	
 }
@@ -265,7 +273,9 @@ void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	text_layer_set_text(text_date_layer, date_text_string);
 	
 	if (persist_read_bool(KEY_HOURLY_VIBE) && tick_time->tm_min == 0) {
-		vibes_double_pulse();
+		if (!quiet_time_is_active()){
+			vibes_double_pulse();
+		}
 	}
 	
 	animation_schedule((Animation*)hand_animation_beg);
@@ -302,35 +312,35 @@ void calLayersPosition() {
 	}
 	
   if (!quickViewAppeared){
-		neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0, 105, 130);
-		mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52, 12, 8);
-		mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59, 12, 8);
-		hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30, 37, 27);
-		hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45, 37, 27);
-		lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47, 16, 13);  //mouth x-2 y-5
+		neko_rect = GRect(19 + PBL_IF_ROUND_ELSE(18,0), 0, 105, 130);
+		mouth_from_rect = GRect(66 + PBL_IF_ROUND_ELSE(18,0), 52, 12, 8);
+		mouth_to_rect = GRect(66 + PBL_IF_ROUND_ELSE(18,0), 59, 12, 8);
+		hand_from_rect = GRect(97 + PBL_IF_ROUND_ELSE(18,0), 30, 37, 27);
+		hand_to_rect = GRect(97 + PBL_IF_ROUND_ELSE(18,0), 45, 37, 27);
+		lip_rect = GRect(64 + PBL_IF_ROUND_ELSE(18,0), 47, 16, 13);  //mouth x-2 y-5
 		
 		battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,1),20,20);
-		bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,121),PBL_IF_ROUND_ELSE(82,2),20,20);
+		bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(151,121),PBL_IF_ROUND_ELSE(82,2),20,20);
     	batterytext_rect = GRect(PBL_IF_ROUND_ELSE(10,3),PBL_IF_ROUND_ELSE(90,18),30,20);
     	phone_batterytext_rect = GRect(PBL_IF_ROUND_ELSE(145,119),PBL_IF_ROUND_ELSE(90,18),25,20);
 		
-		text_date_rect = GRect(0, 145, PBL_IF_ROUND_ELSE(180,144), 35);
-    	text_time_rect = GRect(0, 115, PBL_IF_ROUND_ELSE(180,144), 53);
+		text_date_rect = GRect(0, 145, PBL_IF_ROUND_ELSE(ROUND_BASE_WIDTH,BASE_WIDTH), 35);
+    	text_time_rect = GRect(0, 115, PBL_IF_ROUND_ELSE(ROUND_BASE_WIDTH,BASE_WIDTH), 53);
 	}else{
-		neko_rect = GRect(PBL_IF_ROUND_ELSE(39,19), 0 + quickViewHeightDiff, 105, 130);
-		mouth_from_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 52 + quickViewHeightDiff, 12, 8);
-		mouth_to_rect = GRect(PBL_IF_ROUND_ELSE(86,66), 59 + quickViewHeightDiff, 12, 8);
-		hand_from_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 30 + quickViewHeightDiff, 37, 27);
-		hand_to_rect = GRect(PBL_IF_ROUND_ELSE(117,97), 45 + quickViewHeightDiff, 37, 27);
-		lip_rect = GRect(PBL_IF_ROUND_ELSE(84,64), 47 + quickViewHeightDiff, 16, 13);  //mouth x-2 y-5
+	    neko_rect = GRect(19 + PBL_IF_ROUND_ELSE(18,0), 0 + quickViewHeightDiff, 105, 130);
+		mouth_from_rect = GRect(66 + PBL_IF_ROUND_ELSE(18,0), 52 + quickViewHeightDiff, 12, 8);
+		mouth_to_rect = GRect(66 + PBL_IF_ROUND_ELSE(18,0), 59 + quickViewHeightDiff, 12, 8);
+		hand_from_rect = GRect(97 + PBL_IF_ROUND_ELSE(18,0), 30 + quickViewHeightDiff, 37, 27);
+		hand_to_rect = GRect(97 + PBL_IF_ROUND_ELSE(18,0), 45 + quickViewHeightDiff, 37, 27);
+		lip_rect = GRect(64 + PBL_IF_ROUND_ELSE(18,0), 47 + quickViewHeightDiff, 16, 13);  //mouth x-2 y-5
 		
 		battery_rect = GRect(PBL_IF_ROUND_ELSE(15,8),PBL_IF_ROUND_ELSE(75,1 + quickViewHeightDiff),20,20);
 		bluetooth_rect = GRect(PBL_IF_ROUND_ELSE(150,121),PBL_IF_ROUND_ELSE(82,2 + quickViewHeightDiff),20,20);
     	batterytext_rect = GRect(PBL_IF_ROUND_ELSE(10,3),PBL_IF_ROUND_ELSE(90,18 + quickViewHeightDiff),30,20);
     	phone_batterytext_rect = GRect(PBL_IF_ROUND_ELSE(145,119),PBL_IF_ROUND_ELSE(90,18 + quickViewHeightDiff),25,20);
 		
-		text_date_rect = GRect(0, 30, PBL_IF_ROUND_ELSE(180,144), 35);
-    	text_time_rect = GRect(0, 0, PBL_IF_ROUND_ELSE(180,144), 53);
+		text_date_rect = GRect(0, 30, PBL_IF_ROUND_ELSE(ROUND_BASE_WIDTH,BASE_WIDTH), 35);
+    	text_time_rect = GRect(0, 0, PBL_IF_ROUND_ELSE(ROUND_BASE_WIDTH,BASE_WIDTH), 53);
 	}
 }
 
@@ -341,6 +351,15 @@ static void prv_unobstructed_did_change(void *context) {
 
 static void window_load(Window *window) {
 	Layer *rootLayer = window_get_root_layer(window);
+	GRect rootRect = layer_get_frame(rootLayer);
+	int rootHeight = rootRect.size.h;
+	int rootWidth = rootRect.size.w;
+	int x = (rootHeight - PBL_IF_ROUND_ELSE(ROUND_BASE_HEIGHT, BASE_HEIGHT))/2;
+	int y = (rootWidth - PBL_IF_ROUND_ELSE(ROUND_BASE_WIDTH,BASE_WIDTH))/2;
+	baseLayer = layer_create(GRect(x, y, PBL_IF_ROUND_ELSE(ROUND_BASE_WIDTH, BASE_WIDTH), PBL_IF_ROUND_ELSE(ROUND_BASE_HEIGHT,BASE_HEIGHT)));
+	
+	layer_add_child(rootLayer, baseLayer);
+	
 	calLayersPosition();
 	
 	neko = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_NEKO_SMALL);
@@ -353,33 +372,33 @@ static void window_load(Window *window) {
 	nothing = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_NOTHING_2);
 	
 	batteryLayer = bitmap_layer_create(battery_rect);
-	#if defined(PBL_COLOR)
+	
 	bitmap_layer_set_compositing_mode(batteryLayer, GCompOpSet);
-	#endif
+	
     bitmap_layer_set_bitmap(batteryLayer, battery);
-	layer_add_child(rootLayer, bitmap_layer_get_layer(batteryLayer));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(batteryLayer));
 	
 	bluetoothLayer = bitmap_layer_create(bluetooth_rect);
-	#if defined(PBL_COLOR)
+	
 	bitmap_layer_set_compositing_mode(bluetoothLayer, GCompOpSet);
-	#endif
+	
     bitmap_layer_set_bitmap(bluetoothLayer, bluetooth);
-	layer_add_child(rootLayer, bitmap_layer_get_layer(bluetoothLayer));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(bluetoothLayer));
 	
 	nekoLayer = bitmap_layer_create(neko_rect);
-	#if defined(PBL_COLOR)
+	
 	bitmap_layer_set_compositing_mode(nekoLayer, GCompOpSet);
-	#endif
+	
     bitmap_layer_set_bitmap(nekoLayer, neko);
-    layer_add_child(rootLayer, bitmap_layer_get_layer(nekoLayer));
+    layer_add_child(baseLayer, bitmap_layer_get_layer(nekoLayer));
 	
 	mouthLayer = bitmap_layer_create(mouth_from_rect);
     bitmap_layer_set_bitmap(mouthLayer, mouth);
-    layer_add_child(rootLayer, bitmap_layer_get_layer(mouthLayer));
+    layer_add_child(baseLayer, bitmap_layer_get_layer(mouthLayer));
 	
 	lipLayer = bitmap_layer_create(lip_rect);
     bitmap_layer_set_bitmap(lipLayer, lip);
-	layer_add_child(rootLayer, bitmap_layer_get_layer(lipLayer));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(lipLayer));
 	
 	//make "transparent" effect by creating black & white layer with different compsiting modes
 	hand1 = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_HAND_WHITE);
@@ -393,8 +412,8 @@ static void window_load(Window *window) {
 	bitmap_layer_set_compositing_mode(handLayer2, GCompOpClear);
     bitmap_layer_set_bitmap(handLayer2, hand2);
 	
-	layer_add_child(rootLayer, bitmap_layer_get_layer(handLayer1));
-	layer_add_child(rootLayer, bitmap_layer_get_layer(handLayer2));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(handLayer1));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(handLayer2));
 	
 	batterytext_layer = text_layer_create(batterytext_rect);
     phone_batterytext_layer = text_layer_create(phone_batterytext_rect);
@@ -406,27 +425,27 @@ static void window_load(Window *window) {
     text_layer_set_background_color(text_date_layer, GColorClear);
     text_layer_set_text_alignment(text_date_layer, GTextAlignmentCenter);
     text_layer_set_font(text_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
-    layer_add_child(rootLayer, text_layer_get_layer(text_date_layer));
+    layer_add_child(baseLayer, text_layer_get_layer(text_date_layer));
 	
 	
 	text_layer_set_text_color(text_time_layer, text_color);
     text_layer_set_background_color(text_time_layer, GColorClear);
     text_layer_set_text_alignment(text_time_layer, GTextAlignmentCenter);
     text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_34_MEDIUM_NUMBERS));
-    layer_add_child(rootLayer, text_layer_get_layer(text_time_layer));
+    layer_add_child(baseLayer, text_layer_get_layer(text_time_layer));
 	
 	text_layer_set_text_color(batterytext_layer, text_color);
     text_layer_set_background_color(batterytext_layer, GColorClear);
     text_layer_set_font(batterytext_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
     text_layer_set_text_alignment(batterytext_layer, GTextAlignmentCenter);
-	layer_add_child(rootLayer, text_layer_get_layer(batterytext_layer));
+	layer_add_child(baseLayer, text_layer_get_layer(batterytext_layer));
 	
 	
 	text_layer_set_text_color(phone_batterytext_layer, text_color);
     text_layer_set_background_color(phone_batterytext_layer, GColorClear);
     text_layer_set_font(phone_batterytext_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
     text_layer_set_text_alignment(phone_batterytext_layer, GTextAlignmentCenter);
-	layer_add_child(rootLayer, text_layer_get_layer(phone_batterytext_layer));
+	layer_add_child(baseLayer, text_layer_get_layer(phone_batterytext_layer));
 	
 	handle_battery(battery_state_service_peek());
 	
@@ -451,6 +470,8 @@ static void window_unload(Window *window) {
     
     bitmap_layer_destroy(nekoLayer);
 	
+	layer_destroy(baseLayer);
+	
     gbitmap_destroy(neko);
     gbitmap_destroy(mouth);
     gbitmap_destroy(lip);
@@ -466,8 +487,22 @@ void update_settings() {
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "Update setting");
 	
 	#if defined(PBL_BW)
-		text_color = GColorWhite;
-		background_color = GColorBlack;
+		if (GColorBlackARGB8 == persist_read_int(KEY_TEXT_COLOR) || 
+		   GColorWhiteARGB8 == persist_read_int(KEY_TEXT_COLOR)){
+			GColor8 colorBW;
+			colorBW.argb = persist_read_int(KEY_TEXT_COLOR);
+			text_color = colorBW;
+		}else{
+			text_color = GColorWhite;
+		}
+		if (GColorBlackARGB8 == persist_read_int(KEY_BKGND_COLOR) || 
+		   GColorWhiteARGB8 == persist_read_int(KEY_BKGND_COLOR)){
+			GColor8 colorBW;
+			colorBW.argb = persist_read_int(KEY_BKGND_COLOR);
+			background_color = colorBW;
+		}else{
+			background_color = GColorBlack;
+		}
 	#elif defined(PBL_COLOR)
 		GColor8 color;
 		color.argb = persist_read_int(KEY_TEXT_COLOR);
@@ -489,14 +524,14 @@ void update_settings() {
 		text_layer_set_font(text_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_42_MEDIUM_NUMBERS));
 	}
 	
-	Layer *rootLayer = window_get_root_layer(window);
+	//Layer *rootLayer = window_get_root_layer(window);
 	layer_remove_from_parent(bitmap_layer_get_layer(batteryLayer));
 	bitmap_layer_destroy(batteryLayer);
 	
 	batteryLayer = bitmap_layer_create(battery_rect);
-	#if defined(PBL_COLOR)
+	
 	bitmap_layer_set_compositing_mode(batteryLayer, GCompOpSet);
-	#endif
+	
 	if (persist_read_bool(KEY_SHOW_BATTERY)) {
 		bitmap_layer_set_bitmap(batteryLayer, battery);
 		text_layer_set_text_color(batterytext_layer, text_color);
@@ -504,7 +539,7 @@ void update_settings() {
 		bitmap_layer_set_bitmap(batteryLayer, nothing);
 		text_layer_set_text_color(batterytext_layer, background_color);
 	}
-	layer_add_child(rootLayer, bitmap_layer_get_layer(batteryLayer));
+	layer_add_child(baseLayer, bitmap_layer_get_layer(batteryLayer));
 		
 	if (s_battery_api_supported && persist_read_bool(KEY_SHOW_PHONE_BATT)) {
 		text_layer_set_text_color(phone_batterytext_layer, text_color);
